@@ -14,7 +14,7 @@ builds:
         - arm64
         - "386"
       main: ./main.go
-      binary: "ctltests-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+      binary: "hydectl-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
       ldflags:
         - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
 
@@ -24,8 +24,6 @@ archives:
       files:
         - LICENSE
         - README.md
-      replacements:
-        amd64: x86_64
 
 checksum:
     name_template: "checksums.txt"
@@ -44,7 +42,7 @@ changelog:
 
 release:
     github:
-        owner: prime-run
+        owner: HyDE-Project
         name: hydectl
     prerelease: auto
     draft: false
