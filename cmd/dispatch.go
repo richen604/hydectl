@@ -5,9 +5,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 
 	"hydectl/internal/logger"
 	"hydectl/internal/plugin"
@@ -26,16 +24,16 @@ var dispatchCmd = &cobra.Command{
 	Short: "Dispatch a plugin command",
 	Long:  `Dispatch a plugin command by specifying the plugin name and arguments.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if listPlugins {
-			scripts, err := plugin.LoadScripts(ScriptPaths)
-			if err != nil {
-				logger.Errorf("Error loading scripts: %v", err)
-				fmt.Printf("Error loading scripts: %v\n", err)
-				return
-			}
+		scripts, err := plugin.FindAllScripts(ScriptPaths)
+		if err != nil {
+			logger.Errorf("Error loading scripts: %v", err)
+			fmt.Printf("Error loading scripts: %v\n", err)
+			return
+		}
 
+		if listPlugins {
 			fmt.Println("Available Plugins:")
-			for _, script := range scripts {
+			for script := range scripts {
 				fmt.Println(script)
 			}
 			return
@@ -49,35 +47,8 @@ var dispatchCmd = &cobra.Command{
 		pluginName := args[0]
 		pluginArgs := args[1:]
 
-		// Filter out non-existent directories
-		existingScriptPaths := filterExistingPaths(ScriptPaths)
-
-		var scriptPath string
-		for _, dir := range existingScriptPaths {
-			path := filepath.Join(dir, pluginName)
-			if _, err := os.Stat(path); err == nil {
-				scriptPath = path
-				break
-			}
-		}
-
-		if scriptPath == "" {
-			// Try to find the script with a known extension
-			for _, dir := range existingScriptPaths {
-				for _, ext := range []string{".sh", ".py"} {
-					path := filepath.Join(dir, pluginName+ext)
-					if _, err := os.Stat(path); err == nil {
-						scriptPath = path
-						break
-					}
-				}
-				if scriptPath != "" {
-					break
-				}
-			}
-		}
-
-		if scriptPath == "" {
+		scriptPath, ok := scripts[pluginName]
+		if !ok {
 			logger.Infof("Plugin %s does not exist.", pluginName)
 			fmt.Printf("Plugin %s does not exist.\n", pluginName)
 			return
@@ -88,18 +59,6 @@ var dispatchCmd = &cobra.Command{
 			fmt.Printf("Error executing plugin: %v\n", err)
 		}
 	},
-}
-
-func filterExistingPaths(paths []string) []string {
-	var existingPaths []string
-	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			existingPaths = append(existingPaths, path)
-		} else {
-			logger.Debugf("Directory does not exist: %s", path)
-		}
-	}
-	return existingPaths
 }
 
 var dynamicCommands []*cobra.Command
@@ -161,20 +120,14 @@ type ScriptUsage struct {
 // Example function to dynamically add plugin commands
 func AddPluginCommands() {
 	logger.Debug("Loading scripts for dynamic commands")
-	scripts, err := plugin.LoadScripts(ScriptPaths)
+	scripts, err := plugin.FindAllScripts(ScriptPaths)
 	if err != nil {
 		logger.Errorf("Error loading scripts: %v", err)
 		return
 	}
 
-	for _, script := range scripts {
+	for script, scriptPath := range scripts {
 		logger.Debugf("Processing script: %s", script)
-		scriptPath := findScriptPath(script)
-		if scriptPath == "" {
-			logger.Infof("Plugin %s does not exist.", script)
-			continue
-		}
-
 		usage, err := getScriptUsage(scriptPath)
 		if err != nil {
 			logger.Errorf("Error getting usage for script %s: %v", script, err)
@@ -227,21 +180,4 @@ func getScriptUsage(scriptPath string) (*ScriptUsage, error) {
 	}
 
 	return &usage, nil
-}
-
-func findScriptPath(pluginName string) string {
-	existingScriptPaths := filterExistingPaths(ScriptPaths)
-	for _, dir := range existingScriptPaths {
-		path := filepath.Join(dir, pluginName)
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-		for _, ext := range []string{".sh", ".py"} {
-			path := filepath.Join(dir, pluginName+ext)
-			if _, err := os.Stat(path); err == nil {
-				return path
-			}
-		}
-	}
-	return ""
 }

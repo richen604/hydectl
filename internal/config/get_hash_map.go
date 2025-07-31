@@ -2,7 +2,11 @@
 package config
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -41,12 +45,20 @@ func GetHashMap(wallSources []string, skipStrays bool, verbose bool) ([]Wallpape
 			if file == "" {
 				continue
 			}
-			hashCmd := exec.Command("sha1sum", file)
-			hashOutput, err := hashCmd.Output()
+
+			f, err := os.Open(file)
 			if err != nil {
-				return nil, fmt.Errorf("failed to execute sha1sum command: %w", err)
+				return nil, fmt.Errorf("failed to open file: %w", err)
 			}
-			hash := strings.Fields(string(hashOutput))[0]
+
+			h := sha1.New()
+			if _, err := io.Copy(h, f); err != nil {
+				f.Close()
+				return nil, fmt.Errorf("failed to calculate sha1sum: %w", err)
+			}
+			f.Close()
+
+			hash := hex.EncodeToString(h.Sum(nil))
 			wallHash = append(wallHash, hash)
 			wallList = append(wallList, file)
 		}
