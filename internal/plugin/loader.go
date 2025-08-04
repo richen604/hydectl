@@ -7,13 +7,24 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
-// LoadScripts searches for executable scripts in the specified directories.
-func LoadScripts(dirs []string) ([]string, error) {
-	var scripts []string
-	scriptMap := make(map[string]bool)
+var (
+	scriptCache = make(map[string]string)
+	cacheMutex  = &sync.Mutex{}
+	cached      = false
+)
 
+func FindAllScripts(dirs []string) (map[string]string, error) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	if cached {
+		return scriptCache, nil
+	}
+
+	scriptCache = make(map[string]string)
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			logger.Debugf("Directory does not exist: %s", dir)
@@ -26,10 +37,9 @@ func LoadScripts(dirs []string) ([]string, error) {
 			if info.IsDir() || strings.HasPrefix(info.Name(), ".") || info.Mode().Perm()&0111 == 0 {
 				return nil // Skip directories, hidden files, and non-executable files
 			}
-			baseName := strings.Split(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), ".")[0]
-			if !scriptMap[baseName] {
-				scripts = append(scripts, baseName)
-				scriptMap[baseName] = true
+			baseName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+			if _, exists := scriptCache[baseName]; !exists {
+				scriptCache[baseName] = path
 			}
 			return nil
 		})
@@ -38,7 +48,21 @@ func LoadScripts(dirs []string) ([]string, error) {
 		}
 	}
 
-	return scripts, nil
+	cached = true
+	return scriptCache, nil
+}
+
+func LoadScripts(dirs []string) ([]string, error) {
+	scripts, err := FindAllScripts(dirs)
+	if err != nil {
+		return nil, err
+	}
+
+	var scriptNames []string
+	for name := range scripts {
+		scriptNames = append(scriptNames, name)
+	}
+	return scriptNames, nil
 }
 
 // ExecuteScript runs the specified script with the provided arguments.
