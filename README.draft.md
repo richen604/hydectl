@@ -40,6 +40,15 @@
 - **Pickers:** Includes `rofi`-based pickers for emojis and glyphs.
 - **Hyprland Integration:** Built on the `hyprland-go` library for robust communication with the Hyprland compositor.
 
+## Requirements
+
+`hydectl` is built for a Linux environment, specifically with [Hyprland](https://hyprland.org/) in mind.
+
+- **Go:** Version `1.23.0` or newer.
+- **Hyprland:** Required for most commands to function.
+- **Rofi:** Required for the interactive selectors like `wallpaper select` and `theme select`.
+- **Git & Make:** Required if you plan to build from source.
+
 ## Installation
 
 There are several ways to install `hydectl`.
