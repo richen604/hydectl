@@ -1,2 +1,4 @@
 bin
 hydectl
+result/
+.direnv/
