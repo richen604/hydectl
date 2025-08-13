@@ -12,7 +12,7 @@
         pname = "hydectl";
         version = "unstable"; # You might want to get this from git or a file
         src = ./.;
-        vendorHash = "sha256-GXXMN9SHXXp9r/VQIcQmXcg37mrxeV29fJZPteqHeS4="; # Replace with actual hash
+        vendorHash = "sha256-43umwv0IITBzNdiObxDROPoklZkrEd8Qb2F+739B6nM="; # Replace with actual hash
         proxyVendor = true;
       };
 
